@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกข้อมูลดอกสละ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }</style>
+</head>
+<body class="text-slate-800">
+
+    <header class="bg-gradient-to-r from-emerald-700 to-green-600 text-white shadow-md py-4">
+        <div class="container mx-auto px-4 flex items-center space-x-3">
+            <img src="https://i.imgur.com/KqS7uXw.png" alt="Salak Real Photo" class="h-10 w-10 rounded-full object-cover border-2 border-white">
+            <div>
+                <h1 class="text-lg font-bold">Salak Smart Portal</h1>
+                <p class="text-xs text-emerald-100">ระบบวิเคราะห์ความมั่นใจเป็นเปอร์เซ็นต์ และสรุปตารางส่งออก Excel</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6 max-w-5xl space-y-6">
+        
+        <div class="bg-white rounded-xl shadow-sm border p-5">
+            <h2 class="text-sm font-bold text-slate-700 mb-3 border-b pb-2">📍 ขั้นตอนที่ 1: ระบุพิกัดและสแกนรูป</h2>
+            <form id="uploadForm" class="space-y-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold mb-1 text-slate-600">วันเวลาตรวจ</label>
+                        <input type="text" id="dateTimeInput" name="date_time" class="w-full px-3 py-1.5 border rounded-lg bg-slate-50 text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold mb-1 text-slate-600">ไร่/แปลงที่</label>
+                        <input type="text" name="farm_plot" class="w-full px-3 py-1.5 border rounded-lg text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold mb-1 text-slate-600">แถวที่</label>
+                        <input type="text" name="row_num" class="w-full px-3 py-1.5 border rounded-lg text-sm" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1 text-slate-600">ต้นที่</label>
+                    <input type="text" name="tree_num" class="w-full px-3 py-1.5 border rounded-lg text-sm max-w-[150px]" required>
+                </div>
+
+                <div class="border-2 border-dashed border-emerald-300 bg-emerald-50/30 rounded-lg p-6 text-center cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                    <input type="file" id="fileInput" name="file" accept="image/*" class="hidden" onchange="previewImage(this)" required>
+                    <p id="uploadPrompt" class="text-xs font-bold text-emerald-700">📸 คลิกเพื่อถ่ายรูปหรือเลือกรูปดอกสละ</p>
+                    <img id="imagePreview" class="hidden max-h-40 mx-auto rounded shadow-sm mt-2">
+                </div>
+
+                <button type="submit" id="predictBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm shadow">
+                    🔍 ส่งให้ AI วิเคราะห์สแกนรูปภาพ
+                </button>
+            </form>
+        </div>
+
+        <div id="resultBox" class="hidden bg-white rounded-xl shadow-md border-2 border-emerald-600 p-5 space-y-4">
+            <h3 class="text-sm font-bold text-emerald-800 border-b pb-1">📊 ผลการตรวจสอบล่าสุดจาก AI (วิเคราะห์อิสระ)</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div class="bg-slate-50 p-2 rounded border text-center"><span class="text-xs text-slate-400 block">เพศ</span><span id="resGen" class="font-bold text-emerald-700">-</span></div>
+                <div class="bg-slate-50 p-2 rounded border text-center"><span class="text-xs text-slate-400 block">ผลผสมเกสร</span><span id="resPol" class="font-bold text-emerald-600 text-base">-</span></div>
+                <div class="bg-slate-50 p-2 rounded border text-center"><span class="text-xs text-slate-400 block">สถานะโรค</span><span id="resDis" class="font-bold">-</span></div>
+                <div class="bg-slate-50 p-2 rounded border text-center"><span class="text-xs text-slate-400 block">ระยะเวลา (เป้าหมาย)</span><span id="resWait" class="font-bold text-blue-600">-</span></div>
+            </div>
+            
+            <div class="bg-amber-50 p-2.5 rounded border border-amber-200 text-sm"><strong>เหตุผลประกอบ:</strong> <span id="resReason" class="text-amber-800">-</span></div>
+            
+            <div class="bg-slate-50 p-2.5 rounded border text-xs"><strong>คำแนะนำ:</strong> <span id="resRec">-</span></div>
+
+            <button id="addToListBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm shadow">
+                ➕ ยืนยันข้อมูลถูกต้อง และเพิ่มเข้าตารางรายการ
+            </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-5 space-y-4">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h2 class="text-sm font-bold text-slate-700">📋 รายการข้อมูลที่รอส่งออก Excel (<span id="recordCount">0</span> รายการ)</h2>
+                <div class="space-x-2">
+                    <button id="clearDataBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold px-3 py-2 rounded-lg text-xs shadow disabled:opacity-50" disabled>
+                        🗑️ ล้างตาราง
+                    </button>
+                    <button id="downloadExcelBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg text-xs shadow disabled:opacity-50" disabled>
+                        📥 ดาวน์โหลดไฟล์ Excel (.csv)
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 border-b border-slate-200 text-slate-600">
+                            <th class="p-2 font-bold whitespace-nowrap">วันเวลา</th>
+                            <th class="p-2 font-bold whitespace-nowrap">พิกัด(ไร่/แถว/ต้น)</th>
+                            <th class="p-2 font-bold whitespace-nowrap">เพศ</th>
+                            <th class="p-2 font-bold whitespace-nowrap">ผลผสมเกสร</th>
+                            <th class="p-2 font-bold min-w-[150px]">เหตุผล</th>
+                            <th class="p-2 font-bold whitespace-nowrap">ระยะเวลา</th>
+                            <th class="p-2 font-bold whitespace-nowrap">สถานะโรค</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700">
+                        <tr id="emptyRow"><td colspan="7" class="p-4 text-center text-slate-400 italic">ยังไม่มีข้อมูลในระบบ ลองสแกนต้นแรกดูเลย!</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let allRecords = JSON.parse(localStorage.getItem('salakRecords')) || []; 
+        let tempResult = null; 
+
+        document.addEventListener("DOMContentLoaded", () => {
+            updateTime();
+            renderTable(); 
+        });
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById("dateTimeInput").value = now.toLocaleString('th-TH');
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('imagePreview').classList.remove('hidden');
+                    document.getElementById('uploadPrompt').classList.add('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = ''; 
+
+            if (allRecords.length === 0) {
+                tbody.innerHTML = '<tr id="emptyRow"><td colspan="7" class="p-4 text-center text-slate-400 italic">ยังไม่มีข้อมูลในระบบ ลองสแกนต้นแรกดูเลย!</td></tr>';
+                document.getElementById('recordCount').innerText = 0;
+                document.getElementById('downloadExcelBtn').disabled = true;
+                document.getElementById('clearDataBtn').disabled = true;
+                return;
+            }
+
+            allRecords.forEach(record => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-2 whitespace-nowrap">${record.date_time}</td>
+                    <td class="p-2 whitespace-nowrap font-bold text-emerald-700">${record.farm_plot} / ${record.row_num} / ${record.tree_num}</td>
+                    <td class="p-2 whitespace-nowrap">${record.gender}</td>
+                    <td class="p-2 font-semibold text-emerald-600 whitespace-nowrap">${record.pollination_status}</td>
+                    <td class="p-2 text-amber-700">${record.pollination_reason}</td>
+                    <td class="p-2 font-medium text-blue-600">${record.waiting_duration}</td>
+                    <td class="p-2 ${record.disease_status === 'เป็นโรค' ? 'text-red-600 font-bold' : ''}">${record.disease_status}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('recordCount').innerText = allRecords.length;
+            document.getElementById('downloadExcelBtn').disabled = false;
+            document.getElementById('clearDataBtn').disabled = false;
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('predictBtn');
+            btn.disabled = true; btn.innerText = "กำลังคำนวณผล AI...";
+            document.getElementById('resultBox').classList.add('hidden');
+
+            try {
+                const res = await fetch('/predict', { method: 'POST', body: new FormData(e.target) });
+                tempResult = await res.json();
+
+                document.getElementById('resGen').innerText = tempResult.gender;
+                document.getElementById('resPol').innerText = tempResult.pollination_status;
+                document.getElementById('resReason').innerText = tempResult.pollination_reason; // เพิ่มเหตุผล
+                document.getElementById('resWait').innerText = tempResult.waiting_duration;
+                document.getElementById('resRec').innerText = tempResult.recommendation;
+                
+                const dis = document.getElementById('resDis');
+                dis.innerText = tempResult.disease_status;
+                dis.className = tempResult.disease_status === "เป็นโรค" ? "font-bold text-red-600" : "font-bold text-slate-700";
+
+                document.getElementById('resultBox').classList.remove('hidden');
+            } catch (err) { alert("เกิดข้อผิดพลาดในการวิเคราะห์"); }
+            finally { btn.disabled = false; btn.innerText = "🔍 ส่งให้ AI วิเคราะห์สแกนรูปภาพ"; }
+        });
+
+        document.getElementById('addToListBtn').addEventListener('click', () => {
+            if (!tempResult) return;
+
+            allRecords.push(tempResult);
+            localStorage.setItem('salakRecords', JSON.stringify(allRecords)); 
+
+            renderTable();
+
+            document.getElementById('uploadForm').reset();
+            document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('uploadPrompt').classList.remove('hidden');
+            document.getElementById('resultBox').classList.add('hidden');
+            
+            tempResult = null; 
+            updateTime(); 
+            alert("➕ เพิ่มเข้าตารางสำเร็จ! สามารถถ่ายรูปต้นต่อไปต่อได้เลยครับ");
+        });
+
+        document.getElementById('clearDataBtn').addEventListener('click', () => {
+            if(confirm("แน่ใจไหมว่าต้องการล้างข้อมูลในตารางทั้งหมด? (ข้อมูลที่ยังไม่โหลด Excel จะหายไปเลยนะ)")) {
+                allRecords = [];
+                localStorage.removeItem('salakRecords');
+                renderTable();
+            }
+        });
+
+        document.getElementById('downloadExcelBtn').addEventListener('click', () => {
+            if (allRecords.length === 0) return;
+
+            const headers = ["วันเวลา", "ไร่ที่", "แถวที่", "ต้นที่", "เพศดอก", "สถานะผสมเกสรและเปอร์เซ็นต์", "เหตุผลประกอบ", "สถานะโรค", "ระยะเวลารอคอย", "คำแนะนำ"];
+            let csvContent = "\ufeff"; 
+            csvContent += headers.join(",") + "\n";
+
+            allRecords.forEach(record => {
+                const rowData = [
+                    record.date_time, record.farm_plot, record.row_num, record.tree_num,
+                    record.gender, record.pollination_status, record.pollination_reason, 
+                    record.disease_status, record.waiting_duration, record.recommendation
+                ];
+                csvContent += rowData.map(val => `"${val.replace(/"/g, '""')}"`).join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `สรุปข้อมูลสวนสละ_วิเคราะห์เปอร์เซ็นต์และเหตุผล_${allRecords.length}_รายการ.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            alert("📥 ดาวน์โหลดไฟล์ Excel รวมรายการเรียบร้อยแล้วจ้าเพื่อน!");
+        });
+    </script>
+</body>
+</html>
